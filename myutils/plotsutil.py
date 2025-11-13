@@ -6,33 +6,9 @@ import pandas as pd
 import statsmodels.api as sm
 from typing import Optional, Tuple, Union
 
-# def plot_ycol_vs_jobs(y_column, df):
-#     """
-#     Plots a scatter plot and regression line between 'number_of_jobs' and the specified y_column.
-#     Also prints the Pearson correlation coefficient and p-value.
-
-#     Parameters:
-#     - y_column (str): The name of the column to use for the y-axis.
-#     - df (pd.DataFrame): The DataFrame containing the data.
-#     """
-#     sns.set_theme(style="whitegrid")
-
-#     plt.figure(figsize=(8, 6))
-#     sns.scatterplot(data=df, x='number_of_jobs', y=y_column, s=100)
-#     #sns.regplot(data=df, x='number_of_jobs', y=y_column, scatter=True, ci=None)
-
-#     plt.xlabel('Number of Jobs')
-#     plt.ylabel(y_column.replace('_', ' ').title())
-#     plt.title(f'Correlation between Number of Jobs and {y_column.replace("_", " ").title()}')
-
-#     plt.show()
-
-#     corr_coef, p_value = pearsonr(df['number_of_jobs'], df[y_column])
-#     print(f"Pearson correlation coefficient: {corr_coef:.3f}")
-#     print(f"P-value: {p_value:.3e}")
-
-def plot_ycol_vs_jobs(y_column: str,
-                      df: pd.DataFrame,
+def plot_ycol_vs_xcol(df: pd.DataFrame,
+                      y_column: str,
+                      x_column: str = "number_of_jobs",
                       threshold_ms: Optional[float] = None,
                       threshold_label: str = "threshold",
                       figsize: Tuple[int,int] = (14, 5),
@@ -40,29 +16,30 @@ def plot_ycol_vs_jobs(y_column: str,
                       point_size: int = 60
                       ) -> Union[Tuple[plt.Figure, plt.Axes], Tuple[plt.Figure, Tuple[plt.Axes, plt.Axes]]]:
     """
-    Plot number_of_jobs vs y_column. If threshold_ms is provided, produce two side-by-side panels:
+    Plot x_column vs y_column. If x_column is not provided, use number_jobs.
+     sIf threshold_ms is provided, produce two side-by-side panels:
       - left: full data (own y axis)
       - right: truncated data (y < threshold_ms) (own y axis)
     If threshold_ms is None, produce a single plot.
 
     Returns (fig, ax) for single plot or (fig, (ax_left, ax_right)) for split plot.
     """
-    if 'number_of_jobs' not in df.columns:
-        raise ValueError("DataFrame must contain 'number_of_jobs' column")
+    if x_column not in df.columns:
+        raise ValueError(f"DataFrame must contain '{x_column}' column")
     if y_column not in df.columns:
         raise ValueError(f"DataFrame must contain '{y_column}' column")
 
     sns.set_theme(style="whitegrid")
-    df_clean = df.dropna(subset=['number_of_jobs', y_column]).copy()
+    df_clean = df.dropna(subset=[x_column, y_column]).copy()
 
     def _plot_panel(ax, data, title):
-        sns.scatterplot(data=data, x='number_of_jobs', y=y_column, s=point_size, ax=ax)
-        ax.set_xlabel('Number of Jobs')
+        sns.scatterplot(data=data, x=x_column, y=y_column, s=point_size, ax=ax)
+        ax.set_xlabel(x_column.replace('_', ' ').title())
         ax.set_ylabel(y_column.replace('_', ' ').title())
         ax.set_title(title)
 
         if show_regression and len(data) >= 2:
-            x = data['number_of_jobs'].astype(float).values
+            x = data[x_column].astype(float).values
             y = data[y_column].astype(float).values
             X = sm.add_constant(x)
             model = sm.OLS(y, X).fit()
@@ -94,7 +71,7 @@ def plot_ycol_vs_jobs(y_column: str,
     # Single plot (no threshold)
     if threshold_ms is None:
         fig, ax = plt.subplots(figsize=figsize)
-        _plot_panel(ax, df_clean, f"Number of Jobs vs {y_column.replace('_', ' ').title()} (all data)")
+        _plot_panel(ax, df_clean, f"{x_column.replace('_', ' ').title()} vs {y_column.replace('_', ' ').title()} (all data)")
         plt.tight_layout()
         return fig, ax
 
